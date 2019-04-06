@@ -2,9 +2,10 @@ import axios from 'axios';
 import { data } from './data'
 
 export const fetchAddress = () => async (dispatch) => {
-    let address = '1AJbsFZ64EpEfS5UAjAfcUG8pH8Jn3rn1F'
-    const res = await axios.get(`https://blockchain.info/rawaddr/${address}`)
-    console.log('dummy data', res)
+
+    const res = await axios.get(`/api/fetch_data`);
+    console.log('dummy data', res.data);
+
 };
 
 // to connect to the backend

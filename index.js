@@ -1,6 +1,9 @@
 // Import express library
 const express = require('express');
 const bodyParser = require('body-parser');
+const axios = require('axios');
+const https = require('https');
+const http = require('http');
 const app = express();
 
 // parse application/x-www-form-urlencoded
@@ -29,7 +32,9 @@ app.use((req, res, next) => {
   }
 })
 
-// require('./routes/blockchainRoutes')(app);
+
+//Uses the required address to make the request to the bloackchain url
+require('./routes/blockchainRoutes')(app);
 
 // Dynamic port binding
 const PORT = process.env.PORT || 5000;
