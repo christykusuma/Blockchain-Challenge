@@ -61,23 +61,15 @@ const styleSheet = theme => ({
     hash: {
         fontSize: '11px'
     },
+    mainHash: {
+        fontWeight: 'bold'
+    },
     individualTransactions: {
         border: 'solid 2px pink',
         margin: '10px auto',
         width: '100%'
     },
-    input: {
-        display: 'inline-block',
-        '& table': {
-            margin: '10px 0px',
-            tableLayout: 'fixed',
-            width: '100%'
-        },
-        '& td': {
-            wordWrap: 'break-word',
-        },
-    },
-    out: {
+    individualTransaction: {
         display: 'inline-block',
         '& table': {
             margin: '10px 0px',
@@ -88,11 +80,9 @@ const styleSheet = theme => ({
             wordWrap: 'break-word',
         }
     },
-    inArrow: {
+    arrow: {
         width: '50px',
-    },
-    outArrow: {
-        width: '50px',
+        textAlign: 'center'
     },
 })
 
@@ -111,61 +101,76 @@ class SearchPage extends PureComponent {
         this.setState({ address: value })
     }
 
-    renderInputs = (hash, inputs) => {
+    renderIndividualTransactions = (transaction) => {
         const { classes } = this.props;
-        return (<div className={classes.input}>
-            {inputs.map((input) => {
-                let addr_tag = (<a href={input.prev_out.addr_tag_link}>{`(${input.prev_out.addr_tag})`}</a>)
-                return (
-                <table className={classes.inputTable}>
-                    <tr>
-                        <td>{input.prev_out.addr} {input.prev_out.addr_tag ? addr_tag : ''}</td>
-                        <td className={classes.inArrow}><img src={greenArrow}/></td>
-                        <td>{hash}</td>
-                        <td>{(input.prev_out.value * 0.00000001).toFixed(8)}</td>
-                    </tr>
-                </table>)
-            })}
-        </div>)
+        let addr_tag = transaction.addr_tag ? (<a href={transaction.addr_tag_link}>{`(${transaction.addr_tag})`}</a>) : '';
+        let isOut = transaction.type === 'out' ? true : false;
+        let arrow = isOut ? redArrow : greenArrow;
+        return (<div className={classes.individualTransaction}>
+            <table className={classes.individualTable}>
+                <tr>
+                    <td className={classes.mainHash} colspan='3'>{transaction.hash}</td>
+                    <td>{transaction.tx_index}</td>
+                </tr>
+                <tr>
+                    <td>{isOut ? transaction.hash : transaction.addr} {isOut ? '' : addr_tag}</td>
+                    <td className={classes.arrow}><img src={arrow}/></td>
+                    <td>{isOut ? transaction.addr : transaction.hash} {isOut ? addr_tag : ''}</td>
+                    <td>{(transaction.value * 0.00000001).toFixed(8)}</td>
+                </tr>
+            </table>
+        </div>);   
     }
 
-    renderOuts = (hash, outs) => {
-        const { classes } = this.props;
-        return (<div className={classes.out}>
-            {outs.map((out) => {
-                let addr_tag = (<a href={out.addr_tag_link}>{`(${out.addr_tag})`}</a>)
-                return(
-                <table className={classes.outTable}>
-                    <tr>
-                        <td>{hash}</td>
-                        <td className={classes.outArrow}><img src={redArrow}/></td>
-                        <td>{out.addr} {out.addr_tag ? addr_tag : ''}</td>
-                        <td>{(out.value * 0.00000001).toFixed(8)}</td>
-                    </tr>
-                </table>)
-            })}
-        </div>);
+    parseTransaction = (hash, data, type) => {
+        const object = {};
+        if(type === 'out') {
+            object['hash'] = hash;
+            object['type'] = 'out';
+            object['addr'] = data.addr
+            object['addr_tag'] = data.addr_tag || null
+            object['addr_tag_link'] = data.addr_tag_link || null
+            object['tx_index'] = data.tx_index
+            object['value'] = data.value
+        } else {
+            object['hash'] = hash;
+            object['type'] = 'input';
+            object['addr'] = data.prev_out.addr
+            object['addr_tag'] = data.prev_out.addr_tag || null
+            object['addr_tag_link'] = data.prev_out.addr_tag_link || null
+            object['tx_index'] = data.prev_out.tx_index
+            object['value'] = data.prev_out.value  
+        }
+        return object;
     }
 
-    renderTransactions = (transaction) => {
+    mergeTransactions = (transactions) => {
+        let transactionsArray = [];
+
+        // go through each transaction
+        transactions.map(transaction => {
+           let hash = transaction['hash'];
+           transaction.inputs.length && transaction.inputs.map(input => {
+                transactionsArray.push(this.parseTransaction(hash, input, 'input'))
+            })
+            transaction.out.length && transaction.out.map(out => {
+                transactionsArray.push(this.parseTransaction(hash, out, 'out'))
+            })
+        })
+
+        console.log('transactionsArray', transactionsArray);
+        transactionsArray.sort((a, b) => {
+            return b.tx_index - a.tx_index
+        })
+        return transactionsArray;
+    }
+
+    renderTransactions = (transactions) => {
         const { classes } = this.props;
-        let inputs;
-        let outputs;
-
-        if(transaction.inputs.length) {
-            inputs = this.renderInputs(transaction.hash, transaction.inputs)
-        }
-
-        if(transaction.out.length) {
-            outputs = this.renderOuts(transaction.hash, transaction.out)
-        }
+        let mergedTransactions = this.mergeTransactions(transactions);
 
         return(<div className={classes.individualTransactions}>
-            <h3>HASH: {transaction.hash}</h3>
-            <h3>INPUTS</h3>
-            {inputs}
-            <h3>OUTPUTS</h3>
-            {outputs}
+            {mergedTransactions.map(transaction => this.renderIndividualTransactions(transaction))}
         </div>)
     }
 
@@ -211,18 +216,18 @@ class SearchPage extends PureComponent {
                         </tr>
                         <tr>
                             <td>Total Received</td>
-                            <td>{search.results.total_received}</td>
+                            <td>{search.results.total_received * 0.00000001} BTC</td>
                         </tr>
                         <tr>
                             <td>Final Balance</td>
-                            <td>{search.results.final_balance * 0.00000001}</td>
+                            <td>{search.results.final_balance * 0.00000001} BTC</td>
                         </tr>
                     </table>
                 </div>}
                 {search.results && <div className={classes.transactions}>
                     <h3>Transactions</h3>
                     <div className={classes.transactionData}>
-                        {search.results.txs.map((transaction) => this.renderTransactions(transaction))}
+                        {this.renderTransactions(search.results.txs)}
                     </div>
                 </div>}
             </div>
