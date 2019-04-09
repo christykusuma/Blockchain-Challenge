@@ -3,10 +3,10 @@ import compose from 'recompose/compose'
 import injectSheet from 'react-jss'
 import { connect } from 'react-redux';
 import { Route, BrowserRouter } from 'react-router-dom';
-import AddressPage from './address-page/containers/AddressPage'
+import SearchPage from './search-page/containers/SearchPage'
 
 const styleSheet = theme => ({
-  appContainer: {
+  container: {
   },
 })
 
@@ -14,10 +14,12 @@ const style = injectSheet(styleSheet)
 
 class App extends PureComponent {
   render() {
+    const { classes} = this.props;
+
     return (
         <BrowserRouter>
-          <div className="App">
-            <Route exact path="/" component={AddressPage} />
+          <div className={classes.container}>
+            <Route exact path="/" component={SearchPage} />
           </div>
         </BrowserRouter>
     );
